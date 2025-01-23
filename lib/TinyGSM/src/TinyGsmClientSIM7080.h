@@ -520,7 +520,8 @@ class TinyGsmSim7080 : public TinyGsmSim70xx<TinyGsmSim7080>,
     //                +CAURC:
     //                "recv",<id>,<length>,<remoteIP>,<remote_port><CR><LF><data>
     // NOTE:  including the <recv_mode> fails
-    sendAT(GF("+CAOPEN="), mux, GF(",0,\"TCP\",\""), host, GF("\","), port);
+    sendAT(GF("+CAOPEN="), mux, GF(",0,\"UDP\",\""), host, GF("\","), port);
+    // sendAT(GF("+CAOPEN="), mux, GF(",0,\"TCP\",\""), host, GF("\","), port);
     if (waitResponse(timeout_ms, GF(AT_NL "+CAOPEN:")) != 1) { return 0; }
     // returns OK/r/n/r/n+CAOPEN: <cid>,<result>
     // <result> 0: Success
