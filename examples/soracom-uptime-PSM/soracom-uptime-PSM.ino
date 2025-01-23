@@ -398,7 +398,7 @@ void loop()
     count ++;
     timerAlarmDisable(timer);
     // Pulling up DTR pin, module will go to normal sleep mode
-    // digitalWrite(BOARD_MODEM_DTR_PIN, HIGH);
+    digitalWrite(BOARD_MODEM_DTR_PIN, HIGH);
 
     while(1){
         if (Serial1.available()) {
