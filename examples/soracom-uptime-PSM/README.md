@@ -19,3 +19,6 @@ https://twitter.com/mnlt18/status/1878809636452876698
 
 ・タイマー設定値
 ![PSMtimer.png](https://github.com/mnltake/LilyGo-T-SIM7080G/blob/PSM/image/PSMtimer.png)
+
+・消費電流
+![PPK2.png](https://github.com/mnltake/LilyGo-T-SIM7080G/blob/PSM/image/PPK2.png)

@@ -413,7 +413,7 @@ void loop()
 
                 // タイマーによるウェイクアップを設定
                 sleepMS = (300  - 20) * 1000; //<early_wakeup_time> =defoult 3s see AT+CPSMCFGEXT Configure Modem Optimization of PSM                Serial.printf("Set timer wakeup! %d sec\n", sleepMS / 1000);
-                esp_sleep_enable_timer_wakeup((sleepMS-3) * 1000); // ms to us
+                esp_sleep_enable_timer_wakeup((sleepMS) * 1000); // ms to us
 
                 // GPIOピンによるウェイクアップを設定
                 attachInterrupt(digitalPinToInterrupt(BOARD_MODEM_RI_PIN), wakeUpHandler, FALLING);
