@@ -18,4 +18,4 @@ https://twitter.com/mnlt18/status/1878809636452876698
 ・T3412（周期）-T3324（Active）が閾値以下の時はPSMにならない（デフォルトは60ｓ）AT＋CPSMCFGで変更可
 
 ・タイマー設定値
-![PSMtimer.png](image/PSMtimer.png)
+![PSMtimer.png](https://github.com/mnltake/LilyGo-T-SIM7080G/blob/PSM/image/PSMtimer.png)
