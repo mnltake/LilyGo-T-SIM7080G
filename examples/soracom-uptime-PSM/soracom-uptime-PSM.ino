@@ -328,7 +328,7 @@ void setup()
 
     // sleep modeを使う場合は、以下のコマンドを実行してください
     //AT+CSCLK=1 : Enable sleep mode 1.
-#if 0
+#if 1
     // AT+CSCLK=1
     modem.sendAT("+CSCLK=1");
     if (modem.waitResponse() != 1) {
@@ -429,9 +429,10 @@ void loop()
                 lastMillis = millis();
                 timerWrite(timer, 0);
                 timerAlarmEnable(timer); 
+                // digitalWrite(BOARD_MODEM_PWR_PIN, HIGH);
                 //Pulling down DTR pin will wake module up from sleep mode.
                 digitalWrite(BOARD_MODEM_DTR_PIN, LOW);
-                // wakeUpModem(); 
+                wakeUpModem(); 
                 while(!modem.testAT(500)){
                     wakeUpModem();
                     Serial.print(".");
