@@ -163,17 +163,51 @@ void setup()
     // Turn off ADC data monitoring to save power
     PMU.disableTemperatureMeasure();
     // Disable internal ADC detection
-    PMU.disableBattDetection();
-    PMU.disableVbusVoltageMeasure();
-    PMU.disableBattVoltageMeasure();
-    PMU.disableSystemVoltageMeasure();
+    // PMU.disableBattDetection();
+    // PMU.disableVbusVoltageMeasure();
+    // PMU.disableBattVoltageMeasure();
+    // PMU.disableSystemVoltageMeasure();
+    // Set the minimum common working voltage of the PMU VBUS input,
+    // below this value will turn off the PMU
+    PMU.setVbusVoltageLimit(XPOWERS_AXP2101_VBUS_VOL_LIM_4V36);
 
+    // Set the maximum current of the PMU VBUS input,
+    // higher than this value will turn off the PMU
+    PMU.setVbusCurrentLimit(XPOWERS_AXP2101_VBUS_CUR_LIM_1500MA);
+
+    // Set VSY off voltage as 2600mV , Adjustment range 2600mV ~ 3300mV
+    PMU.setSysPowerDownVoltage(2600);
     // TS Pin detection must be disable, otherwise it cannot be charged
     PMU.disableTSPinMeasure();
-
+    PMU.enableBattDetection();
+    PMU.enableVbusVoltageMeasure();
+    PMU.enableBattVoltageMeasure();
+    PMU.enableSystemVoltageMeasure();
     // Close  IRQs
     PMU.disableIRQ(XPOWERS_AXP2101_ALL_IRQ);
     PMU.clearIrqStatus();
+        PMU.enableIRQ(
+        XPOWERS_AXP2101_BAT_INSERT_IRQ    | XPOWERS_AXP2101_BAT_REMOVE_IRQ      |   //BATTERY
+        XPOWERS_AXP2101_VBUS_INSERT_IRQ   | XPOWERS_AXP2101_VBUS_REMOVE_IRQ     |   //VBUS
+        XPOWERS_AXP2101_PKEY_SHORT_IRQ    | XPOWERS_AXP2101_PKEY_LONG_IRQ       |   //POWER KEY
+        XPOWERS_AXP2101_BAT_CHG_DONE_IRQ  | XPOWERS_AXP2101_BAT_CHG_START_IRQ       //CHARGE
+    );
+    /*********************************
+     * Set PMU Charger params
+    ***********************************/
+    // Set the precharge charging current
+    PMU.setPrechargeCurr(XPOWERS_AXP2101_PRECHARGE_50MA);
+    // Set constant current charge current limit
+    PMU.setChargerConstantCurr(XPOWERS_AXP2101_CHG_CUR_200MA);
+    // Set stop charging termination current
+    PMU.setChargerTerminationCurr(XPOWERS_AXP2101_CHG_ITERM_25MA);
+
+    // Set charge cut-off voltage
+    PMU.setChargeTargetVoltage(XPOWERS_AXP2101_CHG_VOL_4V1);
+
+
+
+
     /*********************************
      * step 2 : start modem
     ***********************************/
@@ -224,7 +258,7 @@ void setup()
     /*********************************
      * step 4 : Set the network mode to NB-IOT
     ***********************************/
-
+ timerWrite(timer, 0);
     modem.setNetworkMode(38);    //LTE only
 
     modem.setPreferredMode(MODEM_CATM);
@@ -319,11 +353,11 @@ void setup()
     * T3412, T3324 time Please check the manual or getPsmTimer description
     * */
    
-    // modem.sendAT("+CPSMS=1,,,\"10001010\",\"00000101\"");// 5min cycle  10sec active
-    // if (modem.waitResponse(5000) != 1) {
-    //     Serial.println("PSM Mode enable failed!");
-    //     return ;
-    // }
+    modem.sendAT("+CPSMS=1,,,\"00000110\",\"00000101\"");// 1hour cycle  10sec active
+    if (modem.waitResponse(5000) != 1) {
+        Serial.println("PSM Mode enable failed!");
+        return ;
+    }
 
 
     // sleep modeを使う場合は、以下のコマンドを実行してください
@@ -350,6 +384,20 @@ void loop()
         case ESP_SLEEP_WAKEUP_TIMER: Serial.println("Wakeup caused by timer"); break;
         default: Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason); break;
     }
+
+    Serial.print("isCharging:"); Serial.println(PMU.isCharging() ? "YES" : "NO");
+    Serial.print("isVbusIn:"); Serial.println(PMU.isVbusIn() ? "YES" : "NO");
+    Serial.print("getBattVoltage:"); Serial.print(PMU.getBattVoltage()); Serial.println("mV");
+    Serial.print("getVbusVoltage:"); Serial.print(PMU.getVbusVoltage()); Serial.println("mV");
+    Serial.print("getSystemVoltage:"); Serial.print(PMU.getSystemVoltage()); Serial.println("mV");
+
+    // The battery percentage may be inaccurate at first use, the PMU will automatically
+    // learn the battery curve and will automatically calibrate the battery percentage
+    // after a charge and discharge cycle
+    if (PMU.isBatteryConnect()) {
+        Serial.print("getBatteryPercent:"); Serial.print(PMU.getBatteryPercent()); Serial.println("%");
+    }
+    Serial.println();
     digitalWrite(BOARD_MODEM_DTR_PIN, LOW);
     PMU.setChargingLedMode(XPOWERS_CHG_LED_BLINK_4HZ);
     while(!modem.isGprsConnected()){
@@ -381,7 +429,7 @@ void loop()
     unsigned long uptime = millis() / 1000;
     // JSON形式のメッセージを作成
     char jsonMessage[128];
-    snprintf(jsonMessage, sizeof(jsonMessage), "{\"uptime\": %lu, \"count\": %d, \"wakeup\": %d}", uptime, count ,int(wakeup_reason));
+    snprintf(jsonMessage, sizeof(jsonMessage), "{\"uptime\": %lu, \"count\": %d, \"wakeup\": %d ,\"bat\" :%d}", uptime, count ,int(wakeup_reason) ,PMU.getBatteryPercent());
     Serial.print("Try publish payload: ");
     Serial.println(jsonMessage);
     client.print(jsonMessage);
@@ -396,11 +444,12 @@ void loop()
     }
     client.stop();//+CACLOSE=0
     count ++;
-    timerAlarmDisable(timer);
+
     // Pulling up DTR pin, module will go to normal sleep mode
     digitalWrite(BOARD_MODEM_DTR_PIN, HIGH);
 
     while(1){
+        timerWrite(timer, 0);
         if (Serial1.available()) {
             String URCreport = Serial1.readStringUntil('\n');
             URCreport.trim();
@@ -412,12 +461,13 @@ void loop()
                 Serial.println("Enter PSM mode!");
 
                 // タイマーによるウェイクアップを設定
-                sleepMS = (300  - 20) * 1000; //<early_wakeup_time> =defoult 3s see AT+CPSMCFGEXT Configure Modem Optimization of PSM                Serial.printf("Set timer wakeup! %d sec\n", sleepMS / 1000);
+                sleepMS = (3600  - 20) * 1000; //<early_wakeup_time> =defoult 3s see AT+CPSMCFGEXT Configure Modem Optimization of PSM                Serial.printf("Set timer wakeup! %d sec\n", sleepMS / 1000);
                 esp_sleep_enable_timer_wakeup((sleepMS) * 1000); // ms to us
 
                 // GPIOピンによるウェイクアップを設定
                 attachInterrupt(digitalPinToInterrupt(BOARD_MODEM_RI_PIN), wakeUpHandler, FALLING);
                 // esp_sleep_enable_ext0_wakeup(GPIO_NUM_3, 0); // BOARD_MODEM_RI_PINがLOWになったらウェイクアップ
+                timerAlarmDisable(timer);
                 delay(1000);
                 lastMillis = millis();
 
