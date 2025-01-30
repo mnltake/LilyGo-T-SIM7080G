@@ -423,7 +423,7 @@ void loop()
         return;
     }
  
-    int sleepMS = 300 * 1000 - (millis() - lastMillis);
+    unsigned long sleepMS;
     char buffer[1024] = {0};
     // uptime を計算 (秒単位)
     unsigned long uptime = millis() / 1000;
@@ -461,11 +461,11 @@ void loop()
                 Serial.println("Enter PSM mode!");
 
                 // タイマーによるウェイクアップを設定
-                sleepMS = (3600  - 20) * 1000; //<early_wakeup_time> =defoult 3s see AT+CPSMCFGEXT Configure Modem Optimization of PSM                Serial.printf("Set timer wakeup! %d sec\n", sleepMS / 1000);
+                sleepMS = (3600  - 20) * 1000; // 1hour - 20s
                 esp_sleep_enable_timer_wakeup((sleepMS) * 1000); // ms to us
 
                 // GPIOピンによるウェイクアップを設定
-                attachInterrupt(digitalPinToInterrupt(BOARD_MODEM_RI_PIN), wakeUpHandler, FALLING);
+                // attachInterrupt(digitalPinToInterrupt(BOARD_MODEM_RI_PIN), wakeUpHandler, FALLING);
                 // esp_sleep_enable_ext0_wakeup(GPIO_NUM_3, 0); // BOARD_MODEM_RI_PINがLOWになったらウェイクアップ
                 timerAlarmDisable(timer);
                 delay(1000);
@@ -473,7 +473,7 @@ void loop()
 
                 esp_light_sleep_start();       
 
-                detachInterrupt(digitalPinToInterrupt(BOARD_MODEM_RI_PIN));
+                // detachInterrupt(digitalPinToInterrupt(BOARD_MODEM_RI_PIN));
                 Serial.printf("Wake up ESP from sleep mode! %d ms \n", millis() - lastMillis);
 
                 lastMillis = millis();
